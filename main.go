@@ -1,11 +1,15 @@
 package main
 
 import (
+	"embed"
+	"io/fs"
 	"log"
 	"net/http"
 	"project-keuangan/config"
 	"project-keuangan/handlers"
 )
+// go:embed fe-vue/dist
+var frontendFiles embed.FS
 
 func main() {
 	// 1. Panggil koneksi DB
@@ -22,6 +26,14 @@ func main() {
 	mux.HandleFunc("DELETE /api/transactions/group/{group_id}", handlers.DeleteByGroup)
 
 	mux.HandleFunc("GET /api/summary", handlers.GetDashboardSummary)
+
+	dist, err := fs.Sub(frontendFiles, "fe-vue/dist")
+	if err != nil {
+		log.Fatal("Gagal load folder frontend:", err)
+	}
+
+	// Kalau user akses URL selain /api, kasih file Vue
+	mux.Handle("/", http.FileServer(http.FS(dist)))
 
 	// 4. Nyalakan Server
 	log.Println("🚀 Server Backend nyala di http://localhost:8080")
