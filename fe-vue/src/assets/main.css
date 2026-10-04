@@ -1,0 +1,19 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brut-red: #ff0042;
+  --color-brut-cyan: #00d1ff;
+  --color-brut-yellow: #ffd100;
+  --color-brut-pink: #ff0099;
+  --color-brut-lime: #b1e600;
+  --color-brut-blue: #0050ff;
+  --shadow-brut: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  --shadow-brut-sm: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+  --shadow-brut-lg: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+}
+
+@layer base {
+  body {
+    @apply bg-white text-black;
+  }
+}

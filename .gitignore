@@ -1,0 +1,38 @@
+# =========================================
+# 🚨 1. DATABASE & RAHASIA (HARAM DI-PUSH)
+# =========================================
+*.db
+*.sqlite
+*.sqlite3
+keuangan.db
+.env
+.env.local
+
+# =========================================
+# 📦 2. FRONTEND (VUE)
+# =========================================
+fe-vue/node_modules/
+fe-vue/dist/
+fe-vue/dist-ssr/
+fe-vue/*.local
+npm-debug.log*
+
+# =========================================
+# 🐹 3. BACKEND (GOLANG & AIR)
+# =========================================
+tmp/
+/tmp
+.air/
+__debug_bin
+*.exe
+*.dll
+*.so
+*.dylib
+app-keuangan
+
+# =========================================
+# 💻 4. SISTEM OPERASI & IDE
+# =========================================
+.DS_Store
+.vscode/
+.idea/
