@@ -55,14 +55,14 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            # Masuk ke folder project
-            cd /home/magentaadam/projects/beruangan-app
+            # 1. Panggil NVM biar Node.js dan PM2 terdeteksi!
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
-            # Pastikan file binary bisa dieksekusi
+            # 2. Masuk ke folder project
+            cd /home/magentaadam/projects/beruangan-app
             chmod +x beruangan-app
             
-            # Coba restart kalau sudah ada, kalau error (belum ada) maka start baru
-            /home/magentaadam/.nvm/versions/node/v24.16.0/bin/pm2 restart beruangan || /home/magentaadam/.nvm/versions/node/v24.16.0/bin/pm2 start ./beruangan-app --name "beruangan"
-            
-            # Simpan state PM2 biar otomatis nyala saat VPS direboot
-            /home/magentaadam/.nvm/versions/node/v24.16.0/bin/pm2 save
+            # 3. Hajar pakai PM2 biasa (nggak perlu alamat panjang lagi)
+            pm2 restart beruangan || pm2 start ./beruangan-app --name "beruangan"
+            pm2 save
