@@ -230,7 +230,7 @@ const showModal = ref(false);
 
 const fetchSummary = async () => {
   try {
-    const response = await fetch("http://localhost:8080/api/summary");
+    const response = await fetch("/api/summary");
     const data = await response.json();
 
     if (!data.reminder_h3) data.reminder_h3 = [];

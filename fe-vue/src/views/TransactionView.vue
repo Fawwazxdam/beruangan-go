@@ -216,12 +216,12 @@ const form = ref({
 })
 
 const fetchTransactions = async () => {
-  const res = await fetch('http://localhost:8080/api/transactions')
+  const res = await fetch('/api/transactions')
   transactions.value = await res.json()
 }
 
 const submitTransaction = async () => {
-  await fetch('http://localhost:8080/api/transactions', {
+  await fetch('/api/transactions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -244,7 +244,7 @@ const submitTransaction = async () => {
 const markAsPaid = async (trx) => {
   if (!confirm(`Tandai "${trx.title}" lunas?`)) return
 
-  await fetch(`http://localhost:8080/api/transactions/${trx.id}`, {
+  await fetch(`/api/transactions/${trx.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -261,7 +261,7 @@ const markAsPaid = async (trx) => {
 const deleteGroup = async (groupId) => {
   if (!confirm('Yakin mau hapus SEMUA cicilan di grup ini?')) return
 
-  await fetch(`http://localhost:8080/api/transactions/group/${groupId}`, {
+  await fetch(`/api/transactions/group/${groupId}`, {
     method: 'DELETE',
   })
   fetchTransactions()
