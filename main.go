@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"project-keuangan/config"
 	"project-keuangan/handlers"
+	"strings"
 )
+
 // go:embed fe-vue/dist
 var frontendFiles embed.FS
 
@@ -27,13 +29,40 @@ func main() {
 
 	mux.HandleFunc("GET /api/summary", handlers.GetDashboardSummary)
 
+	// 4. SETUP ROUTE FRONTEND (JURUS SPA)
 	dist, err := fs.Sub(frontendFiles, "fe-vue/dist")
 	if err != nil {
 		log.Fatal("Gagal load folder frontend:", err)
 	}
 
-	// Kalau user akses URL selain /api, kasih file Vue
-	mux.Handle("/", http.FileServer(http.FS(dist)))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Kalau user salah ketik rute /api/, kasih error 404 murni (jangan kasih HTML)
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Rapikan path URL
+		path := r.URL.Path
+		if path == "/" {
+			path = "index.html"
+		}
+		path = strings.TrimPrefix(path, "/")
+
+		// Cek apakah file fisik (kayak .css, .js, logo.png) benar-benar ada di folder dist
+		_, err := fs.Stat(dist, path)
+		if err != nil {
+			// JURUS SPA: Kalau nggak ada file-nya (misal user akses /dashboard),
+			// paksakan tampilkan index.html biar Vue Router yang ambil alih!
+			html, _ := fs.ReadFile(dist, "index.html")
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write(html)
+			return
+		}
+
+		// Kalau filenya beneran ada, jalankan FileServer bawaan
+		http.FileServer(http.FS(dist)).ServeHTTP(w, r)
+	})
 
 	// 4. Nyalakan Server
 	log.Println("🚀 Server Backend nyala di http://localhost:8080")
