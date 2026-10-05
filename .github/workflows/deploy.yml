@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       
       - name: Build Vue Frontend
         run: |
@@ -62,7 +62,7 @@ jobs:
             chmod +x beruangan-app
             
             # Coba restart kalau sudah ada, kalau error (belum ada) maka start baru
-            pm2 restart beruangan || pm2 start ./beruangan-app --name "beruangan"
+            /home/magentaadam/.nvm/versions/node/v24.16.0/bin/pm2 restart beruangan || /home/magentaadam/.nvm/versions/node/v24.16.0/bin/pm2 start ./beruangan-app --name "beruangan"
             
             # Simpan state PM2 biar otomatis nyala saat VPS direboot
-            pm2 save
+            /home/magentaadam/.nvm/versions/node/v24.16.0/bin/pm2 save
