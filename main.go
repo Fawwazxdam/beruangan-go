@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// go:embed fe-vue/dist
+//go:embed fe-vue/dist
 var frontendFiles embed.FS
 
 func main() {
@@ -29,7 +29,7 @@ func main() {
 
 	mux.HandleFunc("GET /api/summary", handlers.GetDashboardSummary)
 
-	// 4. SETUP ROUTE FRONTEND (JURUS SPA)
+// 4. SETUP ROUTE FRONTEND (JURUS SPA)
 	dist, err := fs.Sub(frontendFiles, "fe-vue/dist")
 	if err != nil {
 		log.Fatal("Gagal load folder frontend:", err)
@@ -49,12 +49,16 @@ func main() {
 		}
 		path = strings.TrimPrefix(path, "/")
 
-		// Cek apakah file fisik (kayak .css, .js, logo.png) benar-benar ada di folder dist
+		// Cek apakah file fisik ada di folder dist
 		_, err := fs.Stat(dist, path)
 		if err != nil {
-			// JURUS SPA: Kalau nggak ada file-nya (misal user akses /dashboard),
-			// paksakan tampilkan index.html biar Vue Router yang ambil alih!
-			html, _ := fs.ReadFile(dist, "index.html")
+			// JURUS SPA: Tangkap error-nya secara eksplisit!
+			html, errRead := fs.ReadFile(dist, "index.html")
+			if errRead != nil {
+				// Kalau gagal baca, JANGAN KASIH LAYAR PUTIH, TAMPILKAN ERROR-NYA!
+				http.Error(w, "Gawat! File index.html nggak ketemu di dist: " + errRead.Error(), http.StatusInternalServerError)
+				return
+			}
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Write(html)
 			return
