@@ -1,19 +1,68 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-brut-red: #ff0042;
-  --color-brut-cyan: #00d1ff;
-  --color-brut-yellow: #ffd100;
-  --color-brut-pink: #ff0099;
-  --color-brut-lime: #b1e600;
-  --color-brut-blue: #0050ff;
-  --shadow-brut: 4px 4px 0px 0px rgba(0, 0, 0, 1);
-  --shadow-brut-sm: 2px 2px 0px 0px rgba(0, 0, 0, 1);
-  --shadow-brut-lg: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+  --color-paper: #f5f2ea;
+  --color-ink: #1c1a17;
+  --color-surface: #fffdf8;
+
+  --color-brut-red: #b3524f;
+  --color-brut-cyan: #bfe3ef;
+  --color-brut-yellow: #f6e7a8;
+  --color-brut-pink: #f4cdd6;
+  --color-brut-lime: #d3e6b4;
+  --color-brut-blue: #b9c9f2;
+
+  --shadow-brut: 3px 3px 0px 0px var(--color-ink);
+  --shadow-brut-sm: 2px 2px 0px 0px var(--color-ink);
+  --shadow-brut-lg: 5px 5px 0px 0px var(--color-ink);
 }
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-white text-black;
+    @apply text-ink antialiased;
+    background-color: var(--color-paper);
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-ink) 7%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-ink) 7%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 32px 32px;
+    background-attachment: fixed;
+  }
+
+  @media (width < 40rem) {
+    body {
+      padding-bottom: 6rem;
+    }
+  }
+
+  ::selection {
+    background: var(--color-brut-yellow);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
