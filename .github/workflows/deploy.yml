@@ -19,8 +19,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-
+          node-version: '20'
+      
       - name: Build Vue Frontend
         run: |
           cd fe-vue
@@ -31,7 +31,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: '1.22'
 
       - name: Build Go App
         run: |
@@ -43,19 +43,26 @@ jobs:
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }} # <--- Menggunakan SSH Key
+          key: ${{ secrets.VPS_SSH_KEY }}
           source: "beruangan-app"
           target: "/home/magentaadam/projects/beruangan-app"
 
-      # 5. Eksekusi restart sistem di VPS
-      - name: Restart App in VPS
+      # 5. Eksekusi restart/start menggunakan PM2 di VPS
+      - name: Restart App in VPS with PM2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }} # <--- Menggunakan SSH Key
+          key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            # Masuk ke folder project
             cd /home/magentaadam/projects/beruangan-app
+            
+            # Pastikan file binary bisa dieksekusi
             chmod +x beruangan-app
-            # Tambahan sudo karena user magentaadam butuh akses admin
-            sudo systemctl restart beruangan.service
+            
+            # Coba restart kalau sudah ada, kalau error (belum ada) maka start baru
+            pm2 restart beruangan || pm2 start ./beruangan-app --name "beruangan"
+            
+            # Simpan state PM2 biar otomatis nyala saat VPS direboot
+            pm2 save
