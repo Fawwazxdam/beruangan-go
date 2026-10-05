@@ -20,7 +20,7 @@
     </div>
 
     <div class="overflow-x-auto border-2 border-black -mx-4 sm:mx-0 px-4 sm:px-0">
-      <table v-if="transactions.length > 0" class="w-full border-collapse">
+      <table v-if="transactions?.length > 0" class="w-full border-collapse">
         <thead>
           <tr class="bg-black text-white">
             <th
@@ -216,8 +216,14 @@ const form = ref({
 })
 
 const fetchTransactions = async () => {
-  const res = await fetch('/api/transactions')
-  transactions.value = await res.json()
+  try {
+    const res = await fetch('/api/transactions')
+    const data = await res.json()
+    transactions.value = data || []
+  } catch (error) {
+    console.error('Gagal mengambil data:', error)
+    transactions.value = []
+  }
 }
 
 const submitTransaction = async () => {
