@@ -2,6 +2,7 @@ package models
 
 type Transaction struct {
 	ID       int    `json:"id"`
+	UserID   string `json:"-"`
 	Title    string `json:"title"`
 	Amount   int    `json:"amount"`
 	Type     string `json:"type"`

@@ -14,6 +14,13 @@ import (
 func GetDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	// Ambil user_id dari header (sama kayak endpoint transaksi)
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		http.Error(w, "Kode pengguna tidak ditemukan", http.StatusUnauthorized)
+		return
+	}
+
 	// 1. Ambil format bulan ini.
 	// Karena sekarang bulan Oktober 2026, fungsi ini otomatis ngasilin "2026-10"
 	bulanIni := time.Now().Format("2006-01")
@@ -39,10 +46,11 @@ func GetDashboardSummary(w http.ResponseWriter, r *http.Request) {
 			
 		FROM transactions
 		WHERE type = 'HUTANG' -- Opsional: Pastikan cuma ngitung yang tipenya hutang
+		AND user_id = ? -- Hanya milik user yang lagi login
 	`
 
 	// Eksekusi query dengan mengirim filterBulanIni 2 kali (karena ada 2 tanda tanya di query)
-	err := config.DB.QueryRow(query, filterBulanIni, filterBulanIni).Scan(
+	err := config.DB.QueryRow(query, filterBulanIni, filterBulanIni, userID).Scan(
 		&summary.TotalHutang,
 		&summary.TotalHutangTerbayar,
 		&summary.TotalTagihanBulanIni,
@@ -82,11 +90,12 @@ func GetDashboardSummary(w http.ResponseWriter, r *http.Request) {
 		FROM transactions 
 		WHERE status = 'PENDING' 
 		AND type = 'HUTANG'
+		AND user_id = ?
 		AND due_date BETWEEN ? AND ?
 		ORDER BY due_date ASC
 	`
 
-	rows, err := config.DB.Query(queryReminder, hariIni, batasH3)
+	rows, err := config.DB.Query(queryReminder, userID, hariIni, batasH3)
 	if err != nil {
 		// Kalau error log aja, jangan sampai ngerusak dashboard keseluruhan
 		fmt.Println("Gagal ambil data H-3:", err)

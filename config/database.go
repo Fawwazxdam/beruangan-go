@@ -24,21 +24,35 @@ func ConnectDB() {
 }
 
 func buatTabel() {
-	// Tambah kolom group_id TEXT
-	// Di dalam fungsi buatTabel()
+	// 1. Bikin tabel (Berlaku kalau file keuangan.db benar-benar baru)
 	query := `
-	CREATE TABLE IF NOT EXISTS transactions (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		title TEXT NOT NULL,
-		amount INTEGER NOT NULL,
-		type TEXT NOT NULL,
-		due_date TEXT,
-		group_id TEXT,
-		status TEXT DEFAULT 'PENDING' -- TAMBAHIN BARIS INI
-	);
-	`
+    CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        due_date TEXT,
+        group_id TEXT,
+        status TEXT DEFAULT 'PENDING'
+    );
+    `
 	_, err := DB.Exec(query)
 	if err != nil {
 		log.Fatal("Gagal bikin tabel: ", err)
+	}
+
+	// 2. JURUS MIGRASI AMAN (Untuk data lama yang belum punya user_id)
+	// Kita paksa tambah kolom user_id. Kalau error (karena kolomnya udah ada), cuekin aja.
+	// Wajib pakai DEFAULT supaya data lama otomatis terisi teks ini.
+	_, errAlter := DB.Exec("ALTER TABLE transactions ADD COLUMN user_id TEXT NOT NULL DEFAULT 'dam'")
+	if errAlter == nil {
+		log.Println("🔧 Kolom user_id berhasil ditambahkan ke tabel lama!")
+	}
+
+	// 3. Pastikan semua data lama yang mungkin kosong di-set ke kode rahasiamu
+	_, errUpdate := DB.Exec("UPDATE transactions SET user_id = 'dam' WHERE user_id IS NULL OR user_id = ''")
+	if errUpdate == nil {
+		log.Println("♻️ Data lama berhasil disuntik user_id!")
 	}
 }

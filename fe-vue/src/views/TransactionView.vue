@@ -8,13 +8,22 @@
         </h2>
         <p class="text-sm sm:text-base text-ink">Catat hutang atau pengeluaran barumu di sini.</p>
       </div>
-      <button
-        @click="showModal = true"
-        class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 text-ink border-[3px] border-ink bg-brut-cyan rounded-none shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
-      >
-        <PhPlus weight="bold" class="w-5 h-5" />
-        Tambah Transaksi
-      </button>
+      <div class="flex gap-3 w-full sm:w-auto">
+        <button
+          @click="showModal = true"
+          class="flex flex-1 sm:flex-none items-center justify-center gap-2 px-4 py-2 text-ink border-[3px] border-ink bg-brut-cyan rounded-none shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+        >
+          <PhPlus weight="bold" class="w-5 h-5" />
+          Tambah Transaksi
+        </button>
+        <button
+          @click="logout"
+          title="Keluar & ganti kode"
+          class="flex items-center justify-center w-12 shrink-0 text-ink border-[3px] border-ink bg-brut-yellow rounded-none shadow-brut cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+        >
+          <PhSignOut weight="bold" class="w-5 h-5" />
+        </button>
+      </div>
     </div>
 
     <template v-if="transactions?.length > 0">
@@ -505,6 +514,7 @@
 
     <Toast ref="toastRef" />
     <ConfirmModal ref="confirmRef" />
+    <CodeGateModal v-if="showLoginGate" @submit="submitCode" />
   </main>
 </template>
 
@@ -512,7 +522,9 @@
 import { ref, computed, onMounted } from 'vue'
 import Toast from '../components/Toast.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
+import CodeGateModal from '../components/CodeGateModal.vue'
 import { formatRupiah, formatDate, formatThousands, toDigits } from '../utils/format.js'
+import { getSavedCode, saveCode, clearCode, authHeaders } from '../utils/userCode.js'
 import {
   PhNote,
   PhFloppyDisk,
@@ -523,6 +535,7 @@ import {
   PhCalendarBlank,
   PhCaretDown,
   PhPencilSimple,
+  PhSignOut,
 } from '@phosphor-icons/vue'
 
 const transactions = ref([])
@@ -531,6 +544,42 @@ const showEditModal = ref(false)
 const expandedGroups = ref([])
 const toastRef = ref(null)
 const confirmRef = ref(null)
+
+const userCode = ref('')
+const showLoginGate = ref(false)
+
+const lockVault = () => {
+  clearCode()
+  userCode.value = ''
+  transactions.value = []
+  showLoginGate.value = true
+}
+
+const isUnauthorized = (res) => {
+  if (res.status !== 401) return false
+  lockVault()
+  toastRef.value?.show('Kode tidak valid, masukkan ulang.', 'error')
+  return true
+}
+
+const submitCode = (code) => {
+  saveCode(code)
+  userCode.value = code
+  showLoginGate.value = false
+  fetchTransactions()
+}
+
+const logout = async () => {
+  const ok = await confirmRef.value?.open({
+    title: 'Keluar Brankas?',
+    message: 'Yakin mau keluar dari buku catatan ini?',
+    confirmText: 'Ya, Keluar',
+    danger: true,
+  })
+  if (!ok) return
+
+  lockVault()
+}
 
 const form = ref({
   title: '',
@@ -550,8 +599,10 @@ const editForm = ref({
 })
 
 const fetchTransactions = async () => {
+  if (!userCode.value) return
   try {
-    const res = await fetch('/api/transactions')
+    const res = await fetch('/api/transactions', { headers: authHeaders(userCode.value) })
+    if (isUnauthorized(res)) return
     const data = await res.json()
 
     if (data) {
@@ -569,9 +620,9 @@ const fetchTransactions = async () => {
 }
 
 const submitTransaction = async () => {
-  await fetch('/api/transactions', {
+  const res = await fetch('/api/transactions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(userCode.value),
     body: JSON.stringify({
       title: form.value.title,
       amount: parseInt(toDigits(form.value.amount), 10),
@@ -580,6 +631,11 @@ const submitTransaction = async () => {
       tenor: parseInt(form.value.tenor),
     }),
   })
+  if (isUnauthorized(res)) return
+  if (!res.ok) {
+    toastRef.value?.show('Gagal menyimpan transaksi.', 'error')
+    return
+  }
 
   form.value.title = ''
   form.value.amount = ''
@@ -641,7 +697,7 @@ const markAsPaid = async (trx) => {
 
   const res = await fetch(`/api/transactions/${trx.id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(userCode.value),
     body: JSON.stringify({
       title: trx.title,
       amount: trx.amount,
@@ -650,6 +706,7 @@ const markAsPaid = async (trx) => {
       status: 'PAID',
     }),
   })
+  if (isUnauthorized(res)) return
   if (!res.ok) {
     toastRef.value?.show('Gagal menandai transaksi lunas.', 'error')
     return
@@ -671,9 +728,9 @@ const openEdit = (trx) => {
 }
 
 const submitEdit = async () => {
-  await fetch(`/api/transactions/${editForm.value.id}`, {
+  const res = await fetch(`/api/transactions/${editForm.value.id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(userCode.value),
     body: JSON.stringify({
       title: editForm.value.title,
       amount: parseInt(toDigits(editForm.value.amount), 10),
@@ -682,6 +739,11 @@ const submitEdit = async () => {
       status: editForm.value.status,
     }),
   })
+  if (isUnauthorized(res)) return
+  if (!res.ok) {
+    toastRef.value?.show('Gagal mengupdate transaksi.', 'error')
+    return
+  }
 
   showEditModal.value = false
   fetchTransactions()
@@ -699,7 +761,9 @@ const deleteGroup = async (groupId) => {
 
   const res = await fetch(`/api/transactions/group/${groupId}`, {
     method: 'DELETE',
+    headers: authHeaders(userCode.value),
   })
+  if (isUnauthorized(res)) return
   const data = await res.json().catch(() => null)
   if (!res.ok) {
     toastRef.value?.show(data?.message || 'Gagal menghapus grup cicilan.', 'error')
@@ -721,7 +785,9 @@ const deleteTransaction = async (id, title) => {
   try {
     const res = await fetch(`/api/transactions/${id}`, {
       method: 'DELETE',
+      headers: authHeaders(userCode.value),
     })
+    if (isUnauthorized(res)) return
     const data = await res.json().catch(() => null)
     if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`)
     fetchTransactions() // Refresh data setelah hapus
@@ -733,6 +799,12 @@ const deleteTransaction = async (id, title) => {
 }
 
 onMounted(() => {
-  fetchTransactions()
+  const savedCode = getSavedCode()
+  if (savedCode) {
+    userCode.value = savedCode
+    fetchTransactions()
+  } else {
+    showLoginGate.value = true
+  }
 })
 </script>

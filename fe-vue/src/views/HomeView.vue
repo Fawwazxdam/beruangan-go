@@ -260,13 +260,16 @@
     </div>
 
     <Toast ref="toastRef" />
+    <CodeGateModal v-if="showLoginGate" @submit="submitCode" />
   </main>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import Toast from '../components/Toast.vue'
+import CodeGateModal from '../components/CodeGateModal.vue'
 import { formatRupiah, formatDate } from '../utils/format.js'
+import { getSavedCode, saveCode, clearCode, authHeaders } from '../utils/userCode.js'
 import {
   PhChartLine,
   PhWarningCircle,
@@ -293,6 +296,22 @@ const isLoading = ref(true)
 const showModal = ref(false)
 const toastRef = ref(null)
 
+const userCode = ref('')
+const showLoginGate = ref(false)
+
+const lockVault = () => {
+  clearCode()
+  userCode.value = ''
+  showLoginGate.value = true
+}
+
+const submitCode = (code) => {
+  saveCode(code)
+  userCode.value = code
+  showLoginGate.value = false
+  fetchSummary()
+}
+
 const clampPercent = (nilai) => Math.min(100, Math.max(0, Math.round(Number(nilai) || 0)))
 
 const pctLunas = computed(() => clampPercent(summary.value.persentase_terbayar))
@@ -315,8 +334,17 @@ const bulanLabel = new Intl.DateTimeFormat('id-ID', {
 }).format(new Date())
 
 const fetchSummary = async () => {
+  if (!userCode.value) return
   try {
-    const response = await fetch('/api/summary')
+    const response = await fetch('/api/summary', { headers: authHeaders(userCode.value) })
+
+    if (response.status === 401) {
+      lockVault()
+      toastRef.value?.show('Kode tidak valid, masukkan ulang.', 'error')
+      return
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
     const data = await response.json()
 
     if (!data.reminder_h3) data.reminder_h3 = []
@@ -332,6 +360,13 @@ const fetchSummary = async () => {
 }
 
 onMounted(() => {
-  fetchSummary()
+  const savedCode = getSavedCode()
+  if (savedCode) {
+    userCode.value = savedCode
+    fetchSummary()
+  } else {
+    showLoginGate.value = true
+    isLoading.value = false
+  }
 })
 </script>

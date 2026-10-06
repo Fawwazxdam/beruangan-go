@@ -14,7 +14,13 @@ import (
 func GetTransactions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	rows, err := config.DB.Query("SELECT id, title, amount, type, due_date, status, group_id FROM transactions")
+	userID := r.Header.Get("X-User-ID") // Ambil user_id dari header
+	if userID == "" {
+		http.Error(w, "Kode pengguna tidak ditemukan", http.StatusUnauthorized)
+		return
+	}
+
+	rows, err := config.DB.Query("SELECT id, title, amount, type, due_date, status, group_id FROM transactions WHERE user_id = ?", userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -36,6 +42,12 @@ func GetTransactions(w http.ResponseWriter, r *http.Request) {
 // Handler POST (Menyimpan Data + Auto Generate Cicilan)
 func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	userID := r.Header.Get("X-User-ID") // Ambil user_id dari header
+	if userID == "" {
+		http.Error(w, "Kode pengguna tidak ditemukan", http.StatusUnauthorized)
+		return
+	}
 
 	var req models.Transaction
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -62,11 +74,11 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 
 	// 4. Looping sebanyak jumlah Tenor (Cicilan)
 	for i := 0; i < req.Tenor; i++ {
-		
+
 		// Fungsi andalan Golang: AddDate(Tahun, Bulan, Hari)
 		// Kalau putaran pertama (i=0), bulan ditambah 0. Putaran kedua (i=1), bulan ditambah 1, dst.
 		installmentDate := startDate.AddDate(0, i, 0).Format("2006-01-02")
-		
+
 		// Atur nama Title. Kalau tenor > 1, tambahin embel-embel "(1/3)"
 		title := req.Title
 		if req.Tenor > 1 {
@@ -74,9 +86,9 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Masukin ke DB!
-		query := "INSERT INTO transactions (title, amount, type, due_date, group_id) VALUES (?, ?, ?, ?, ?)"
-		_, err := config.DB.Exec(query, title, req.Amount, req.Type, installmentDate, groupID)
-		
+		query := "INSERT INTO transactions (user_id, title, amount, type, due_date, group_id) VALUES (?, ?, ?, ?, ?, ?)"
+		_, err := config.DB.Exec(query, userID, title, req.Amount, req.Type, installmentDate, groupID)
+
 		if err != nil {
 			http.Error(w, "Gagal simpan ke DB", http.StatusInternalServerError)
 			return
@@ -94,6 +106,12 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 func DeleteTransaction(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	userID := r.Header.Get("X-User-ID") // Ambil user_id dari header
+	if userID == "" {
+		http.Error(w, "Kode pengguna tidak ditemukan", http.StatusUnauthorized)
+		return
+	}
+
 	// 1. Tangkap ID dari URL (Contoh: /api/transactions/5)
 	// Fitur ini otomatis ada di Go 1.22 ke atas!
 	id := r.PathValue("id")
@@ -105,9 +123,9 @@ func DeleteTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Eksekusi query hapus ke database
-	query := "DELETE FROM transactions WHERE id = ?"
-	result, err := config.DB.Exec(query, id)
-	
+	query := "DELETE FROM transactions WHERE id = ? AND user_id = ?"
+	result, err := config.DB.Exec(query, id, userID)
+
 	if err != nil {
 		http.Error(w, "Gagal menghapus data di DB", http.StatusInternalServerError)
 		return
@@ -133,32 +151,37 @@ func DeleteTransaction(w http.ResponseWriter, r *http.Request) {
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Tangkap ID dari URL
+	// TAMBAHKAN VALIDASI USER ID
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		http.Error(w, "Kode pengguna tidak ditemukan", http.StatusUnauthorized)
+		return
+	}
+
 	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "ID tidak boleh kosong", http.StatusBadRequest)
 		return
 	}
 
-	// Tangkap data JSON baru dari Frontend
 	var req models.Transaction
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Format JSON salah", http.StatusBadRequest)
 		return
 	}
 
-	// Kalau Frontend gak ngirim status, kita paksa jadi PENDING biar aman
 	if req.Status == "" {
 		req.Status = "PENDING"
 	}
 
-	// Eksekusi Update ke Database
+	// UBAH QUERY UNTUK MENGECEK user_id
 	query := `
-		UPDATE transactions 
-		SET title = ?, amount = ?, type = ?, due_date = ?, status = ?
-		WHERE id = ?
-	`
-	result, err := config.DB.Exec(query, req.Title, req.Amount, req.Type, req.DueDate, req.Status, id)
+        UPDATE transactions 
+        SET title = ?, amount = ?, type = ?, due_date = ?, status = ?
+        WHERE id = ? AND user_id = ?
+    `
+	// TAMBAHKAN userID PADA PARAMETER EXEC
+	result, err := config.DB.Exec(query, req.Title, req.Amount, req.Type, req.DueDate, req.Status, id, userID)
 	if err != nil {
 		http.Error(w, "Gagal update data di DB", http.StatusInternalServerError)
 		return
@@ -166,7 +189,7 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		http.Error(w, "Data dengan ID tersebut tidak ditemukan", http.StatusNotFound)
+		http.Error(w, "Data tidak ditemukan atau Anda tidak berhak mengubahnya", http.StatusNotFound)
 		return
 	}
 
@@ -180,16 +203,23 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 func DeleteByGroup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Tangkap group_id dari URL
+	// TAMBAHKAN VALIDASI USER ID
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		http.Error(w, "Kode pengguna tidak ditemukan", http.StatusUnauthorized)
+		return
+	}
+
 	groupID := r.PathValue("group_id")
 	if groupID == "" {
 		http.Error(w, "Group ID tidak boleh kosong", http.StatusBadRequest)
 		return
 	}
 
-	// Hapus semua baris yang punya group_id ini
-	query := "DELETE FROM transactions WHERE group_id = ?"
-	result, err := config.DB.Exec(query, groupID)
+	// UBAH QUERY UNTUK MENGECEK user_id
+	query := "DELETE FROM transactions WHERE group_id = ? AND user_id = ?"
+	// TAMBAHKAN userID PADA PARAMETER EXEC
+	result, err := config.DB.Exec(query, groupID, userID)
 	if err != nil {
 		http.Error(w, "Gagal menghapus data grup", http.StatusInternalServerError)
 		return
@@ -197,12 +227,11 @@ func DeleteByGroup(w http.ResponseWriter, r *http.Request) {
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		http.Error(w, "Tidak ada data dengan Group ID tersebut", http.StatusNotFound)
+		http.Error(w, "Tidak ada data dengan Group ID tersebut atau Anda tidak berhak menghapusnya", http.StatusNotFound)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	// Kita bisa kasih tau berapa baris yang berhasil kehapus barengan!
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": fmt.Sprintf("Berhasil menghapus %d cicilan sekaligus!", rowsAffected),
 	})
