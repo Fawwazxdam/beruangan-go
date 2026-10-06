@@ -51,7 +51,7 @@
             <div class="mt-3 flex items-center justify-between gap-3 text-sm text-ink">
               <span class="flex items-center gap-1.5">
                 <PhCalendarBlank weight="bold" class="w-4 h-4" />
-                {{ grp.nextDue }}
+                {{ formatDate(grp.nextDue) }}
               </span>
               <span class="font-black text-base">{{ formatRupiah(grp.totalAmount) }}</span>
             </div>
@@ -108,7 +108,7 @@
               <div class="min-w-0">
                 <p class="text-sm font-black leading-snug break-words">{{ item.title }}</p>
                 <p class="text-xs text-ink">
-                  {{ item.due_date }} · {{ formatRupiah(item.amount) }}
+                  {{ formatDate(item.due_date) }} · {{ formatRupiah(item.amount) }}
                 </p>
               </div>
               <div class="flex items-center gap-2 shrink-0">
@@ -202,7 +202,7 @@
                   </span>
                 </td>
                 <td class="p-2 sm:p-4 text-xs sm:text-sm border-2 border-ink">
-                  {{ grp.nextDue }}
+                  {{ formatDate(grp.nextDue) }}
                 </td>
                 <td class="p-2 sm:p-4 text-xs sm:text-sm border-2 border-ink">
                   {{ formatRupiah(grp.totalAmount) }}
@@ -268,7 +268,7 @@
                           {{ item.title }}
                         </td>
                         <td class="p-2 sm:p-3 text-xs sm:text-sm border-t-2 border-ink">
-                          {{ item.due_date }}
+                          {{ formatDate(item.due_date) }}
                         </td>
                         <td class="p-2 sm:p-3 text-xs sm:text-sm border-t-2 border-ink">
                           {{ formatRupiah(item.amount) }}
@@ -356,9 +356,12 @@
             <div class="flex-1">
               <label class="block mb-2 text-sm font-black uppercase text-ink">Nominal (Rp)</label>
               <input
-                v-model="form.amount"
-                type="number"
+                :value="form.amount"
+                @input="form.amount = formatThousands($event.target.value)"
+                type="text"
+                inputmode="numeric"
                 required
+                placeholder="Contoh: 1.500.000"
                 class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               />
             </div>
@@ -446,9 +449,12 @@
             <div class="flex-1">
               <label class="block mb-2 text-sm font-black uppercase text-ink">Nominal (Rp)</label>
               <input
-                v-model="editForm.amount"
-                type="number"
+                :value="editForm.amount"
+                @input="editForm.amount = formatThousands($event.target.value)"
+                type="text"
+                inputmode="numeric"
                 required
+                placeholder="Contoh: 1.500.000"
                 class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               />
             </div>
@@ -496,11 +502,17 @@
         </form>
       </div>
     </div>
+
+    <Toast ref="toastRef" />
+    <ConfirmModal ref="confirmRef" />
   </main>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import Toast from '../components/Toast.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
+import { formatRupiah, formatDate, formatThousands, toDigits } from '../utils/format.js'
 import {
   PhNote,
   PhFloppyDisk,
@@ -517,10 +529,12 @@ const transactions = ref([])
 const showModal = ref(false)
 const showEditModal = ref(false)
 const expandedGroups = ref([])
+const toastRef = ref(null)
+const confirmRef = ref(null)
 
 const form = ref({
   title: '',
-  amount: 0,
+  amount: '',
   type: 'HUTANG',
   due_date: '',
   tenor: 1,
@@ -529,7 +543,7 @@ const form = ref({
 const editForm = ref({
   id: null,
   title: '',
-  amount: 0,
+  amount: '',
   type: 'HUTANG',
   due_date: '',
   status: 'PENDING',
@@ -560,7 +574,7 @@ const submitTransaction = async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       title: form.value.title,
-      amount: parseInt(form.value.amount),
+      amount: parseInt(toDigits(form.value.amount), 10),
       type: form.value.type,
       due_date: form.value.due_date,
       tenor: parseInt(form.value.tenor),
@@ -568,11 +582,11 @@ const submitTransaction = async () => {
   })
 
   form.value.title = ''
-  form.value.amount = 0
+  form.value.amount = ''
   form.value.tenor = 1
   showModal.value = false
   fetchTransactions()
-  alert('Transaksi berhasil disimpan!')
+  toastRef.value?.show('Transaksi berhasil disimpan!', 'success')
 }
 
 const groupedTransactions = computed(() => {
@@ -618,9 +632,14 @@ const statusLabel = (grp) => {
 }
 
 const markAsPaid = async (trx) => {
-  if (!confirm(`Tandai "${trx.title}" lunas?`)) return
+  const ok = await confirmRef.value?.open({
+    title: 'Tandai Lunas?',
+    message: `Tandai "${trx.title}" lunas?`,
+    confirmText: 'Ya, Lunas',
+  })
+  if (!ok) return
 
-  await fetch(`/api/transactions/${trx.id}`, {
+  const res = await fetch(`/api/transactions/${trx.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -631,14 +650,19 @@ const markAsPaid = async (trx) => {
       status: 'PAID',
     }),
   })
+  if (!res.ok) {
+    toastRef.value?.show('Gagal menandai transaksi lunas.', 'error')
+    return
+  }
   fetchTransactions()
+  toastRef.value?.show(`"${trx.title}" berhasil ditandai lunas!`, 'success')
 }
 
 const openEdit = (trx) => {
   editForm.value = {
     id: trx.id,
     title: trx.title,
-    amount: trx.amount,
+    amount: formatThousands(trx.amount),
     type: trx.type,
     due_date: trx.due_date,
     status: trx.status || 'PENDING',
@@ -652,7 +676,7 @@ const submitEdit = async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       title: editForm.value.title,
-      amount: parseInt(editForm.value.amount),
+      amount: parseInt(toDigits(editForm.value.amount), 10),
       type: editForm.value.type,
       due_date: editForm.value.due_date,
       status: editForm.value.status,
@@ -661,38 +685,51 @@ const submitEdit = async () => {
 
   showEditModal.value = false
   fetchTransactions()
-  alert('Transaksi berhasil diupdate!')
+  toastRef.value?.show('Transaksi berhasil diupdate!', 'success')
 }
 
 const deleteGroup = async (groupId) => {
-  if (!confirm('Yakin mau hapus SEMUA cicilan di grup ini?')) return
+  const ok = await confirmRef.value?.open({
+    title: 'Hapus Grup Cicilan?',
+    message: 'Yakin mau hapus SEMUA cicilan di grup ini?',
+    confirmText: 'Hapus Semua',
+    danger: true,
+  })
+  if (!ok) return
 
-  await fetch(`/api/transactions/group/${groupId}`, {
+  const res = await fetch(`/api/transactions/group/${groupId}`, {
     method: 'DELETE',
   })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    toastRef.value?.show(data?.message || 'Gagal menghapus grup cicilan.', 'error')
+    return
+  }
   fetchTransactions()
+  toastRef.value?.show(data?.message || 'Grup cicilan berhasil dihapus!', 'success')
 }
 
 const deleteTransaction = async (id, title) => {
-  if (!confirm(`Yakin mau hapus transaksi "${title}" ini aja?`)) return
+  const ok = await confirmRef.value?.open({
+    title: 'Hapus Transaksi?',
+    message: `Yakin mau hapus transaksi "${title}" ini aja?`,
+    confirmText: 'Hapus',
+    danger: true,
+  })
+  if (!ok) return
 
   try {
-    await fetch(`/api/transactions/${id}`, {
+    const res = await fetch(`/api/transactions/${id}`, {
       method: 'DELETE',
     })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`)
     fetchTransactions() // Refresh data setelah hapus
+    toastRef.value?.show(data?.message || 'Transaksi berhasil dihapus!', 'success')
   } catch (error) {
     console.error('Gagal menghapus transaksi:', error)
-    alert('Waduh, gagal menghapus transaksi nih.')
+    toastRef.value?.show('Waduh, gagal menghapus transaksi nih.', 'error')
   }
-}
-
-const formatRupiah = (angka) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(angka)
 }
 
 onMounted(() => {

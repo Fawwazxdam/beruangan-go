@@ -228,7 +228,7 @@
                 <div>
                   <h4 class="font-black text-ink">{{ trx.title }}</h4>
                   <p class="mt-1 text-sm font-black text-brut-red">
-                    Jatuh Tempo: {{ trx.due_date }}
+                    Jatuh Tempo: {{ formatDate(trx.due_date) }}
                   </p>
                 </div>
                 <div class="text-left sm:text-right">
@@ -258,11 +258,15 @@
         </div>
       </div>
     </div>
+
+    <Toast ref="toastRef" />
   </main>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import Toast from '../components/Toast.vue'
+import { formatRupiah, formatDate } from '../utils/format.js'
 import {
   PhChartLine,
   PhWarningCircle,
@@ -287,6 +291,7 @@ const summary = ref({
 
 const isLoading = ref(true)
 const showModal = ref(false)
+const toastRef = ref(null)
 
 const clampPercent = (nilai) => Math.min(100, Math.max(0, Math.round(Number(nilai) || 0)))
 
@@ -320,18 +325,10 @@ const fetchSummary = async () => {
     summary.value = data
   } catch (error) {
     console.error('Gagal mengambil data backend:', error)
-    alert('Pastikan server Golang sudah nyala!')
+    toastRef.value?.show('Pastikan server Golang sudah nyala!', 'error')
   } finally {
     isLoading.value = false
   }
-}
-
-const formatRupiah = (angka) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(angka)
 }
 
 onMounted(() => {
