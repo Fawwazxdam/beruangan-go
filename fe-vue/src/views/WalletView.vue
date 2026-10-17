@@ -136,11 +136,83 @@
           <p class="mt-3 text-[10px] font-black uppercase text-ink/60 break-all">
             ID: {{ wallet.id }}
           </p>
+
+          <div class="mt-4 pt-3 border-t-2 border-ink/20 flex justify-end gap-2">
+            <button
+              @click="openEdit(wallet)"
+              title="Ubah nama / saldo"
+              class="flex items-center justify-center w-9 h-9 text-ink border-2 border-ink bg-brut-yellow font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
+            >
+              <PhPencilSimple weight="bold" class="w-4 h-4" />
+            </button>
+            <button
+              @click="deleteWallet(wallet)"
+              title="Hapus dompet"
+              class="flex items-center justify-center w-9 h-9 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
+            >
+              <PhTrashSimple weight="bold" class="w-4 h-4" />
+            </button>
+          </div>
         </article>
       </div>
     </template>
 
+    <!-- Modal edit dompet -->
+    <div
+      v-if="showEditModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-sm"
+      @click.self="showEditModal = false"
+    >
+      <div
+        class="p-4 sm:p-6 bg-surface border-[3px] border-ink shadow-brut-lg rounded-brut max-w-md w-[calc(100%-2rem)] mx-auto sm:mx-4"
+      >
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-black">Edit Dompet</h3>
+          <button
+            @click="showEditModal = false"
+            class="flex items-center justify-center w-8 h-8 text-ink bg-brut-yellow border-2 border-ink rounded-brut-sm font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+          >
+            <PhX weight="bold" class="w-4 h-4" />
+          </button>
+        </div>
+
+        <form @submit.prevent="submitEdit" class="space-y-4">
+          <div>
+            <label class="block mb-2 text-sm font-black uppercase text-ink">Nama Dompet</label>
+            <input
+              v-model="editForm.name"
+              type="text"
+              required
+              class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+            />
+          </div>
+
+          <div>
+            <label class="block mb-2 text-sm font-black uppercase text-ink">Saldo (Rp)</label>
+            <input
+              :value="editForm.balance"
+              @input="editForm.balance = formatThousands($event.target.value)"
+              type="text"
+              inputmode="numeric"
+              required
+              placeholder="0"
+              class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+            />
+          </div>
+
+          <button
+            type="submit"
+            class="flex items-center justify-center w-full py-3 gap-2 text-ink border-[3px] border-ink bg-brut-cyan rounded-brut shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+          >
+            <PhFloppyDisk weight="bold" class="w-5 h-5" />
+            Simpan Perubahan
+          </button>
+        </form>
+      </div>
+    </div>
+
     <Toast ref="toastRef" />
+    <ConfirmModal ref="confirmRef" />
     <CodeGateModal v-if="showLoginGate" @submit="submitCode" />
   </main>
 </template>
@@ -148,17 +220,34 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import Toast from '../components/Toast.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
 import { formatRupiah, formatThousands, toDigits } from '../utils/format.js'
 import { getSavedCode, saveCode, clearCode, authHeaders } from '../utils/userCode.js'
 import CodeGateModal from '../components/CodeGateModal.vue'
-import { PhWallet, PhPiggyBank, PhPlus, PhFloppyDisk } from '@phosphor-icons/vue'
+import {
+  PhWallet,
+  PhPiggyBank,
+  PhPlus,
+  PhFloppyDisk,
+  PhPencilSimple,
+  PhTrashSimple,
+  PhX,
+} from '@phosphor-icons/vue'
 
 // State
 const wallets = ref([])
 const isLoading = ref(true)
 const toastRef = ref(null)
+const confirmRef = ref(null)
 
 const form = ref({
+  name: '',
+  balance: '',
+})
+
+const showEditModal = ref(false)
+const editForm = ref({
+  id: null,
   name: '',
   balance: '',
 })
@@ -246,6 +335,77 @@ const submitWallet = async () => {
     toastRef.value?.show('Dompet berhasil disimpan!', 'success')
   } catch (error) {
     console.error('Error nyimpen dompet:', error)
+    toastRef.value?.show('Pastikan server Golang sudah nyala!', 'error')
+  }
+}
+
+// Buka modal edit, isi form dengan data dompet yang dipilih
+const openEdit = (wallet) => {
+  editForm.value = {
+    id: wallet.id,
+    name: wallet.name,
+    balance: formatThousands(wallet.balance),
+  }
+  showEditModal.value = true
+}
+
+// Kirim perubahan dompet ke Golang
+const submitEdit = async () => {
+  const payload = {
+    name: editForm.value.name.trim(),
+    balance: parseInt(toDigits(editForm.value.balance) || '0', 10),
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/wallets/${editForm.value.id}`, {
+      method: 'PUT',
+      headers: authHeaders(userCode.value),
+      body: JSON.stringify(payload),
+    })
+
+    if (isUnauthorized(response)) return
+    if (!response.ok) {
+      toastRef.value?.show('Gagal mengupdate dompet.', 'error')
+      return
+    }
+
+    showEditModal.value = false
+    await fetchWallets()
+    toastRef.value?.show('Dompet berhasil diupdate!', 'success')
+  } catch (error) {
+    console.error('Error update dompet:', error)
+    toastRef.value?.show('Pastikan server Golang sudah nyala!', 'error')
+  }
+}
+
+// Hapus dompet (dengan konfirmasi dulu)
+const deleteWallet = async (wallet) => {
+  const ok = await confirmRef.value?.open({
+    title: 'Hapus Dompet?',
+    message: `Yakin mau hapus dompet "${wallet.name}"? Saldo ${formatRupiah(
+      wallet.balance,
+    )} juga ikut hilang.`,
+    confirmText: 'Hapus',
+    danger: true,
+  })
+  if (!ok) return
+
+  try {
+    const response = await fetch(`${API_URL}/wallets/${wallet.id}`, {
+      method: 'DELETE',
+      headers: authHeaders(userCode.value),
+    })
+
+    if (isUnauthorized(response)) return
+    if (!response.ok) {
+      toastRef.value?.show('Gagal menghapus dompet.', 'error')
+      return
+    }
+
+    await fetchWallets()
+    toastRef.value?.show('Dompet berhasil dihapus!', 'success')
+  } catch (error) {
+    console.error('Error hapus dompet:', error)
     toastRef.value?.show('Pastikan server Golang sudah nyala!', 'error')
   }
 }

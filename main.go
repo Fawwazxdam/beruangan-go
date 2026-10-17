@@ -31,6 +31,8 @@ func main() {
 
 	mux.HandleFunc("GET /api/wallets", handlers.GetWallets)
 	mux.HandleFunc("POST /api/wallets", handlers.CreateWallet)
+	mux.HandleFunc("PUT /api/wallets/{id}", handlers.UpdateWallet)
+	mux.HandleFunc("DELETE /api/wallets/{id}", handlers.DeleteWallet)
 
 	mux.HandleFunc("POST /api/webhook/telegram", handlers.TelegramWebhook)
 
