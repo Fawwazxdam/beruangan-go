@@ -1,6 +1,6 @@
 <template>
   <main class="max-w-4xl mx-auto px-4 sm:px-8 py-8 sm:py-10">
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
       <div>
         <h2 class="flex items-center gap-2 sm:gap-3 mb-2 text-2xl sm:text-4xl font-black text-ink">
           <PhNote weight="fill" class="w-7 h-7 sm:w-9 sm:h-9" />
@@ -11,7 +11,7 @@
       <div class="flex gap-3 w-full sm:w-auto">
         <button
           @click="showModal = true"
-          class="flex flex-1 sm:flex-none items-center justify-center gap-2 px-4 py-2 text-ink border-[3px] border-ink bg-brut-cyan rounded-none shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+          class="flex flex-1 sm:flex-none items-center justify-center gap-2 px-4 py-2 text-ink border-[3px] border-ink bg-brut-cyan rounded-brut shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
         >
           <PhPlus weight="bold" class="w-5 h-5" />
           Tambah Transaksi
@@ -19,19 +19,45 @@
         <button
           @click="logout"
           title="Keluar & ganti kode"
-          class="flex items-center justify-center w-12 shrink-0 text-ink border-[3px] border-ink bg-brut-yellow rounded-none shadow-brut cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+          class="flex items-center justify-center w-12 shrink-0 text-ink border-[3px] border-ink bg-brut-yellow rounded-brut shadow-brut cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
         >
           <PhSignOut weight="bold" class="w-5 h-5" />
         </button>
       </div>
     </div>
 
-    <template v-if="transactions?.length > 0">
+    <div class="flex items-center gap-2 mb-6">
+      <span class="text-xs font-black uppercase tracking-wide text-ink">Tampilkan</span>
+      <div
+        class="flex border-2 border-ink rounded-brut-sm overflow-hidden shadow-brut-sm bg-surface"
+        role="group"
+        aria-label="Filter tampilan transaksi"
+      >
+        <button
+          @click="filterMode = 'month'"
+          :aria-pressed="filterMode === 'month'"
+          class="px-3 py-1.5 text-xs font-black uppercase tracking-wide cursor-pointer transition-colors"
+          :class="filterMode === 'month' ? 'bg-brut-cyan text-ink' : 'bg-surface text-ink/60'"
+        >
+          Bulan Ini
+        </button>
+        <button
+          @click="filterMode = 'all'"
+          :aria-pressed="filterMode === 'all'"
+          class="px-3 py-1.5 text-xs font-black uppercase tracking-wide cursor-pointer transition-colors border-l-2 border-ink"
+          :class="filterMode === 'all' ? 'bg-brut-cyan text-ink' : 'bg-surface text-ink/60'"
+        >
+          Semua
+        </button>
+      </div>
+    </div>
+
+    <template v-if="groupedTransactions.length > 0">
       <ul class="sm:hidden space-y-3">
         <li
           v-for="grp in groupedTransactions"
           :key="grp.groupId"
-          class="border-2 border-ink shadow-brut-sm overflow-hidden"
+          class="border-2 border-ink shadow-brut-sm rounded-brut overflow-hidden"
           :class="grp.allPaid ? 'bg-brut-lime' : 'bg-surface'"
         >
           <div
@@ -50,7 +76,7 @@
                 {{ grp.baseTitle }}
               </h3>
               <span
-                class="shrink-0 px-2 py-1 text-[11px] font-black border-2 border-ink"
+                class="shrink-0 px-2 py-1 text-[11px] font-black border-2 border-ink rounded-brut-sm"
                 :class="grp.allPaid ? 'bg-brut-cyan' : 'bg-brut-yellow'"
               >
                 {{ statusLabel(grp) }}
@@ -69,38 +95,38 @@
               {{ grp.items.length }} cicilan
             </p>
 
-            <div class="mt-4 flex gap-2" @click.stop>
+            <div class="mt-4 flex justify-end gap-2" @click.stop>
               <button
                 v-if="grp.single && grp.items[0].status === 'PENDING'"
                 @click="markAsPaid(grp.items[0])"
-                class="flex flex-1 items-center justify-center gap-1.5 py-2 text-ink border-2 border-ink bg-brut-cyan font-black cursor-pointer shadow-brut-sm transition-all hover:translate-y-[-1px]"
+                title="Tandai lunas"
+                class="flex items-center justify-center w-10 h-10 text-ink border-2 border-ink bg-brut-cyan font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
               >
-                <PhCheckCircle weight="fill" class="w-4 h-4" />
-                Lunas
+                <PhCheckCircle weight="fill" class="w-5 h-5" />
               </button>
               <button
                 v-if="grp.single"
                 @click="openEdit(grp.items[0])"
-                class="flex flex-1 items-center justify-center gap-1.5 py-2 text-ink border-2 border-ink bg-brut-yellow font-black cursor-pointer shadow-brut-sm transition-all hover:translate-y-[-1px]"
+                title="Edit transaksi"
+                class="flex items-center justify-center w-10 h-10 text-ink border-2 border-ink bg-brut-yellow font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
               >
-                <PhPencilSimple weight="bold" class="w-4 h-4" />
-                Edit
+                <PhPencilSimple weight="bold" class="w-5 h-5" />
               </button>
               <button
                 v-if="grp.single"
                 @click="deleteTransaction(grp.items[0].id, grp.items[0].title)"
-                class="flex flex-1 items-center justify-center gap-1.5 py-2 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm transition-all hover:translate-y-[-1px]"
+                title="Hapus transaksi"
+                class="flex items-center justify-center w-10 h-10 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
               >
-                <PhTrashSimple weight="bold" class="w-4 h-4" />
-                Hapus
+                <PhTrashSimple weight="bold" class="w-5 h-5" />
               </button>
               <button
                 v-else
                 @click="deleteGroup(grp.groupId)"
-                class="flex flex-1 items-center justify-center gap-1.5 py-2 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm transition-all hover:translate-y-[-1px]"
+                title="Hapus grup cicilan"
+                class="flex items-center justify-center w-10 h-10 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
               >
-                <PhTrashSimple weight="bold" class="w-4 h-4" />
-                Hapus Grup
+                <PhTrash weight="bold" class="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -122,7 +148,7 @@
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 <span
-                  class="px-2 py-1 text-[11px] font-black border-2 border-ink"
+                  class="px-2 py-1 text-[11px] font-black border-2 border-ink rounded-brut-sm"
                   :class="item.status === 'PAID' ? 'bg-brut-cyan' : 'bg-brut-yellow'"
                 >
                   {{ item.status }}
@@ -130,22 +156,22 @@
                 <button
                   v-if="item.status === 'PENDING'"
                   @click="markAsPaid(item)"
-                  class="flex items-center gap-1 px-2 py-1 text-ink border-2 border-ink bg-brut-cyan font-black cursor-pointer shadow-brut-sm transition-all hover:translate-y-[-1px]"
+                  title="Tandai lunas"
+                  class="flex items-center justify-center w-8 h-8 text-ink border-2 border-ink bg-brut-cyan font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                 >
                   <PhCheckCircle weight="fill" class="w-4 h-4" />
-                  Lunas
                 </button>
                 <button
                   @click="openEdit(item)"
                   title="Edit transaksi"
-                  class="flex items-center justify-center w-8 h-8 text-ink border-2 border-ink bg-brut-yellow font-black cursor-pointer shadow-brut-sm transition-all hover:translate-y-[-1px]"
+                  class="flex items-center justify-center w-8 h-8 text-ink border-2 border-ink bg-brut-yellow font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                 >
                   <PhPencilSimple weight="bold" class="w-4 h-4" />
                 </button>
                 <button
                   @click="deleteTransaction(item.id, item.title)"
                   title="Hapus transaksi"
-                  class="flex items-center justify-center w-8 h-8 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm transition-all hover:translate-y-[-1px]"
+                  class="flex items-center justify-center w-8 h-8 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                 >
                   <PhTrashSimple weight="bold" class="w-4 h-4" />
                 </button>
@@ -155,7 +181,7 @@
         </li>
       </ul>
 
-      <div class="hidden sm:block overflow-x-auto border-2 border-ink bg-surface shadow-brut-sm">
+      <div class="hidden sm:block overflow-x-auto border-2 border-ink bg-surface shadow-brut-sm rounded-brut">
         <table class="w-full border-collapse">
           <thead>
             <tr class="bg-ink text-paper">
@@ -204,7 +230,7 @@
                     {{ grp.baseTitle }}
                     <span
                       v-if="!grp.single"
-                      class="px-1.5 py-0.5 text-[10px] font-black border-2 border-ink bg-brut-cyan"
+                      class="px-1.5 py-0.5 text-[10px] font-black border-2 border-ink bg-brut-cyan rounded-brut-sm"
                     >
                       {{ grp.items.length }} cicilan
                     </span>
@@ -218,45 +244,45 @@
                 </td>
                 <td class="p-2 sm:p-4 text-xs sm:text-sm border-2 border-ink">
                   <span
-                    class="px-2 py-1 text-xs font-black border-2 border-ink"
+                    class="px-2 py-1 text-xs font-black border-2 border-ink rounded-brut-sm"
                     :class="grp.allPaid ? 'bg-brut-cyan' : 'bg-brut-yellow'"
                   >
                     {{ statusLabel(grp) }}
                   </span>
                 </td>
                 <td class="p-2 sm:p-4 text-xs sm:text-sm border-2 border-ink">
-                  <div class="flex flex-wrap gap-2" @click.stop>
+                  <div class="flex items-center gap-2" @click.stop>
                     <button
                       v-if="grp.single && grp.items[0].status === 'PENDING'"
                       @click="markAsPaid(grp.items[0])"
-                      class="flex items-center gap-1 px-2 py-1 text-ink border-2 border-ink bg-brut-cyan font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+                      title="Tandai lunas"
+                      class="flex items-center justify-center w-9 h-9 text-ink border-2 border-ink bg-brut-cyan font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                     >
                       <PhCheckCircle weight="fill" class="w-4 h-4" />
-                      Lunas
                     </button>
                     <button
                       v-if="grp.single"
                       @click="openEdit(grp.items[0])"
-                      class="flex items-center gap-1 px-2 py-1 text-ink border-2 border-ink bg-brut-yellow font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+                      title="Edit transaksi"
+                      class="flex items-center justify-center w-9 h-9 text-ink border-2 border-ink bg-brut-yellow font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                     >
                       <PhPencilSimple weight="bold" class="w-4 h-4" />
-                      Edit
                     </button>
                     <button
                       v-if="grp.single"
                       @click="deleteTransaction(grp.items[0].id, grp.items[0].title)"
-                      class="flex items-center gap-1 px-2 py-1 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+                      title="Hapus transaksi"
+                      class="flex items-center justify-center w-9 h-9 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                     >
                       <PhTrashSimple weight="bold" class="w-4 h-4" />
-                      Hapus
                     </button>
                     <button
                       v-else
                       @click="deleteGroup(grp.groupId)"
-                      class="flex items-center gap-1 px-2 py-1 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+                      title="Hapus grup cicilan"
+                      class="flex items-center justify-center w-9 h-9 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                     >
-                      <PhTrashSimple weight="bold" class="w-4 h-4" />
-                      Hapus Grup
+                      <PhTrash weight="bold" class="w-4 h-4" />
                     </button>
                   </div>
                 </td>
@@ -284,35 +310,35 @@
                         </td>
                         <td class="p-2 sm:p-3 text-xs sm:text-sm border-t-2 border-ink">
                           <span
-                            class="px-2 py-1 text-xs font-black border-2 border-ink"
+                            class="px-2 py-1 text-xs font-black border-2 border-ink rounded-brut-sm"
                             :class="item.status === 'PAID' ? 'bg-brut-cyan' : 'bg-brut-yellow'"
                           >
                             {{ item.status }}
                           </span>
                         </td>
                         <td class="p-2 sm:p-3 text-xs sm:text-sm border-t-2 border-ink">
-                          <div class="flex flex-wrap gap-2">
+                          <div class="flex items-center justify-end gap-2">
                             <button
                               v-if="item.status === 'PENDING'"
                               @click="markAsPaid(item)"
-                              class="flex items-center gap-1 px-2 py-1 text-ink border-2 border-ink bg-brut-cyan font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+                              title="Tandai lunas"
+                              class="flex items-center justify-center w-8 h-8 text-ink border-2 border-ink bg-brut-cyan font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                             >
                               <PhCheckCircle weight="fill" class="w-4 h-4" />
-                              Lunas
                             </button>
                             <button
                               @click="openEdit(item)"
-                              class="flex items-center gap-1 px-2 py-1 text-ink border-2 border-ink bg-brut-yellow font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+                              title="Edit transaksi"
+                              class="flex items-center justify-center w-8 h-8 text-ink border-2 border-ink bg-brut-yellow font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                             >
                               <PhPencilSimple weight="bold" class="w-4 h-4" />
-                              Edit
                             </button>
                             <button
                               @click="deleteTransaction(item.id, item.title)"
-                              class="flex items-center gap-1 px-2 py-1 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+                              title="Hapus transaksi"
+                              class="flex items-center justify-center w-8 h-8 text-white border-2 border-ink bg-brut-red font-black cursor-pointer shadow-brut-sm rounded-brut-sm transition-all hover:translate-y-[-1px]"
                             >
                               <PhTrashSimple weight="bold" class="w-4 h-4" />
-                              Hapus
                             </button>
                           </div>
                         </td>
@@ -327,7 +353,12 @@
       </div>
     </template>
 
-    <p v-else class="py-8 text-center font-bold text-ink">Belum ada transaksi, yuk catat dulu!</p>
+    <p v-else class="py-8 text-center font-bold text-ink">
+      <template v-if="filterMode === 'month' && transactions?.length > 0">
+        Belum ada transaksi bulan ini. Lihat "Semua" kalau mau cek yang lain.
+      </template>
+      <template v-else>Belum ada transaksi, yuk catat dulu!</template>
+    </p>
 
     <div
       v-if="showModal"
@@ -335,13 +366,13 @@
       @click.self="showModal = false"
     >
       <div
-        class="p-4 sm:p-6 bg-surface border-[3px] border-ink shadow-brut-lg max-w-2xl w-[calc(100%-2rem)] sm:w-full mx-auto sm:mx-4"
+        class="p-4 sm:p-6 bg-surface border-[3px] border-ink shadow-brut-lg rounded-brut max-w-2xl w-[calc(100%-2rem)] sm:w-full mx-auto sm:mx-4"
       >
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-xl font-black">Tambah Transaksi Baru</h3>
           <button
             @click="showModal = false"
-            class="flex items-center justify-center w-8 h-8 text-ink bg-brut-yellow border-2 border-ink rounded-none font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+            class="flex items-center justify-center w-8 h-8 text-ink bg-brut-yellow border-2 border-ink rounded-brut-sm font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
           >
             <PhX weight="bold" class="w-4 h-4" />
           </button>
@@ -357,7 +388,7 @@
               type="text"
               required
               placeholder="Contoh: Paylater Kredivo"
-              class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+              class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
             />
           </div>
 
@@ -371,14 +402,14 @@
                 inputmode="numeric"
                 required
                 placeholder="Contoh: 1.500.000"
-                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               />
             </div>
             <div class="flex-1">
               <label class="block mb-2 text-sm font-black uppercase text-ink">Jenis</label>
               <select
                 v-model="form.type"
-                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               >
                 <option value="HUTANG">Hutang</option>
                 <option value="PENGELUARAN">Pengeluaran Rutin</option>
@@ -395,7 +426,7 @@
                 v-model="form.due_date"
                 type="date"
                 required
-                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               />
             </div>
             <div class="flex-1">
@@ -407,14 +438,14 @@
                 type="number"
                 min="1"
                 required
-                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               />
             </div>
           </div>
 
           <button
             type="submit"
-            class="flex items-center justify-center w-full py-3 gap-2 text-ink border-[3px] border-ink bg-brut-cyan rounded-none shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+            class="flex items-center justify-center w-full py-3 gap-2 text-ink border-[3px] border-ink bg-brut-cyan rounded-brut shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
           >
             <PhFloppyDisk weight="bold" class="w-5 h-5" />
             Simpan Transaksi
@@ -429,13 +460,13 @@
       @click.self="showEditModal = false"
     >
       <div
-        class="p-4 sm:p-6 bg-surface border-[3px] border-ink shadow-brut-lg max-w-2xl w-[calc(100%-2rem)] sm:w-full mx-auto sm:mx-4"
+        class="p-4 sm:p-6 bg-surface border-[3px] border-ink shadow-brut-lg rounded-brut max-w-2xl w-[calc(100%-2rem)] sm:w-full mx-auto sm:mx-4"
       >
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-xl font-black">Edit Transaksi</h3>
           <button
             @click="showEditModal = false"
-            class="flex items-center justify-center w-8 h-8 text-ink bg-brut-yellow border-2 border-ink rounded-none font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
+            class="flex items-center justify-center w-8 h-8 text-ink bg-brut-yellow border-2 border-ink rounded-brut-sm font-black cursor-pointer shadow-brut hover:translate-y-[-1px]"
           >
             <PhX weight="bold" class="w-4 h-4" />
           </button>
@@ -450,7 +481,7 @@
               v-model="editForm.title"
               type="text"
               required
-              class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+              class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
             />
           </div>
 
@@ -464,14 +495,14 @@
                 inputmode="numeric"
                 required
                 placeholder="Contoh: 1.500.000"
-                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               />
             </div>
             <div class="flex-1">
               <label class="block mb-2 text-sm font-black uppercase text-ink">Jenis</label>
               <select
                 v-model="editForm.type"
-                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               >
                 <option value="HUTANG">Hutang</option>
                 <option value="PENGELUARAN">Pengeluaran Rutin</option>
@@ -486,14 +517,14 @@
                 v-model="editForm.due_date"
                 type="date"
                 required
-                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               />
             </div>
             <div class="flex-1">
               <label class="block mb-2 text-sm font-black uppercase text-ink">Status</label>
               <select
                 v-model="editForm.status"
-                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-none outline-none focus:border-ink focus:ring-2 focus:ring-ink"
+                class="w-full px-3 py-2 text-ink bg-surface border-2 border-ink rounded-brut outline-none focus:border-ink focus:ring-2 focus:ring-ink"
               >
                 <option value="PENDING">Belum Lunas</option>
                 <option value="PAID">Lunas</option>
@@ -503,7 +534,7 @@
 
           <button
             type="submit"
-            class="flex items-center justify-center w-full py-3 gap-2 text-ink border-[3px] border-ink bg-brut-yellow rounded-none shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+            class="flex items-center justify-center w-full py-3 gap-2 text-ink border-[3px] border-ink bg-brut-yellow rounded-brut shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
           >
             <PhFloppyDisk weight="bold" class="w-5 h-5" />
             Simpan Perubahan
@@ -536,6 +567,7 @@ import {
   PhCaretDown,
   PhPencilSimple,
   PhSignOut,
+  PhTrash,
 } from '@phosphor-icons/vue'
 
 const transactions = ref([])
@@ -544,6 +576,16 @@ const showEditModal = ref(false)
 const expandedGroups = ref([])
 const toastRef = ref(null)
 const confirmRef = ref(null)
+
+// Mode tampilan daftar transaksi:
+// 'month' = hanya bulan ini (default), 'all' = semua transaksi.
+const filterMode = ref('month')
+
+// Kunci YYYY-MM bulan berjalan, dipakai buat nyocokin due_date transaksi single.
+const currentYearMonth = computed(() => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+})
 
 const userCode = ref('')
 const showLoginGate = ref(false)
@@ -654,7 +696,7 @@ const groupedTransactions = computed(() => {
     map.get(key).push(trx)
   }
 
-  return Array.from(map, ([groupId, items]) => {
+  const allGroups = Array.from(map, ([groupId, items]) => {
     items.sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
 
     const paidCount = items.filter((item) => item.status === 'PAID').length
@@ -670,6 +712,19 @@ const groupedTransactions = computed(() => {
       paidCount,
       allPaid: paidCount === items.length,
     }
+  })
+
+  if (filterMode.value === 'all') return allGroups
+
+  // Mode "Bulan Ini":
+  // - Transaksi sekali bayar (single) tampil hanya jika jatuh tempo bulan ini.
+  // - Grup cicilan tampil selama masih ada angsuran PENDING, supaya hutang
+  //   jangka panjang yang sedang berjalan tidak hilang dari radar.
+  return allGroups.filter((grp) => {
+    if (grp.single) {
+      return (grp.items[0].due_date || '').startsWith(currentYearMonth.value)
+    }
+    return grp.items.some((item) => item.status === 'PENDING')
   })
 })
 

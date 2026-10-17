@@ -11,7 +11,7 @@
         <p class="mt-1 text-sm sm:text-base text-ink">Pantau hutang dan tagihanmu bulan ini.</p>
       </div>
       <span
-        class="flex items-center gap-1.5 self-start sm:self-auto border-2 border-ink bg-surface px-2.5 py-1 text-[11px] sm:text-xs font-black uppercase tracking-wide shadow-brut-sm"
+        class="flex items-center gap-1.5 self-start sm:self-auto border-2 border-ink bg-surface px-2.5 py-1 text-[11px] sm:text-xs font-black uppercase tracking-wide shadow-brut-sm rounded-brut-sm"
       >
         <PhCalendarBlank weight="bold" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         {{ bulanLabel }}
@@ -20,15 +20,16 @@
 
     <div
       v-if="isLoading"
-      class="py-12 border-[3px] border-ink bg-surface shadow-brut text-center text-ink font-black text-lg"
+      class="py-12 border-[3px] border-ink bg-surface shadow-brut rounded-brut text-center text-ink font-black text-lg"
     >
       Mengambil data dari server...
     </div>
 
     <div v-else>
-      <div class="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
+      <div class="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-4 md:auto-rows-fr">
+        <!-- Bento tile: hero Tagihan Bulan Ini (2 kolom x 2 baris) -->
         <article
-          class="p-4 sm:p-6 text-ink bg-brut-cyan border-[3px] border-ink shadow-brut transition-all hover:translate-y-[-2px]"
+          class="p-5 sm:p-7 text-ink bg-brut-cyan border-[3px] border-ink shadow-brut rounded-brut transition-all hover:translate-y-[-2px] md:col-span-2 md:row-span-2 flex flex-col"
         >
           <div class="flex items-start justify-between gap-3">
             <div>
@@ -40,22 +41,22 @@
               </p>
             </div>
             <span
-              class="grid shrink-0 w-8 h-8 place-items-center border-2 border-ink bg-surface shadow-brut-sm"
+              class="grid shrink-0 w-10 h-10 place-items-center border-2 border-ink bg-surface shadow-brut-sm rounded-brut-sm"
             >
-              <PhReceipt weight="fill" class="w-4 h-4" />
+              <PhReceipt weight="fill" class="w-5 h-5" />
             </span>
           </div>
 
-          <p class="mt-3 text-xl sm:text-2xl md:text-3xl font-black break-words">
+          <p class="mt-4 sm:mt-6 text-3xl sm:text-4xl md:text-5xl font-black break-words">
             {{ formatRupiah(summary.total_tagihan_bulan_ini) }}
           </p>
 
-          <div class="mt-4">
-            <div class="flex items-center justify-between gap-2 mb-1.5">
+          <div class="mt-auto pt-5 sm:pt-7">
+            <div class="flex items-end justify-between gap-2 mb-1.5">
               <span class="text-[11px] sm:text-xs font-black uppercase">Sudah dibayar</span>
-              <span class="text-sm sm:text-base font-black leading-none">{{ pctTagihan }}%</span>
+              <span class="text-2xl sm:text-3xl font-black leading-none">{{ pctTagihan }}%</span>
             </div>
-            <div class="w-full h-4 border-2 border-ink bg-surface overflow-hidden">
+            <div class="w-full h-4 border-2 border-ink bg-surface overflow-hidden rounded-brut-sm">
               <div
                 class="h-full bg-ink transition-all duration-700"
                 :style="{ width: pctTagihan + '%' }"
@@ -63,15 +64,14 @@
             </div>
             <p class="mt-1.5 text-[11px] sm:text-xs font-bold">
               {{ formatRupiah(summary.tagihan_terbayar_bulan_ini) }}
-              <span class="text-ink/70"
-                >dari {{ formatRupiah(summary.total_tagihan_bulan_ini) }}</span
-              >
+              <span class="text-ink/70">dari {{ formatRupiah(summary.total_tagihan_bulan_ini) }}</span>
             </p>
           </div>
         </article>
 
+        <!-- Bento tile: Total Hutang Aktif (tile lebar) -->
         <article
-          class="p-4 sm:p-6 text-ink bg-brut-pink border-[3px] border-ink shadow-brut transition-all hover:translate-y-[-2px]"
+          class="p-4 sm:p-6 text-ink bg-brut-pink border-[3px] border-ink shadow-brut rounded-brut transition-all hover:translate-y-[-2px] md:col-span-2 flex flex-col"
         >
           <div class="flex items-start justify-between gap-3">
             <div>
@@ -83,24 +83,24 @@
               </p>
             </div>
             <span
-              class="grid shrink-0 w-8 h-8 place-items-center border-2 border-ink bg-surface shadow-brut-sm"
+              class="grid shrink-0 w-8 h-8 place-items-center border-2 border-ink bg-surface shadow-brut-sm rounded-brut-sm"
             >
               <PhWallet weight="fill" class="w-4 h-4" />
             </span>
           </div>
 
-          <p class="mt-3 text-xl sm:text-2xl md:text-3xl font-black break-words">
+          <p class="mt-3 text-2xl sm:text-3xl font-black break-words">
             {{ formatRupiah(sisaHutang) }}
           </p>
 
-          <div class="mt-4 grid grid-cols-2 gap-2">
-            <div class="border-2 border-ink bg-surface p-2">
+          <div class="mt-auto pt-4 grid grid-cols-2 gap-2">
+            <div class="border-2 border-ink bg-surface p-2 rounded-brut-sm">
               <p class="text-[10px] font-black uppercase text-ink/70">Total Awal</p>
               <p class="mt-0.5 text-xs sm:text-sm font-black break-words">
                 {{ formatRupiah(summary.total_hutang) }}
               </p>
             </div>
-            <div class="border-2 border-ink bg-surface p-2">
+            <div class="border-2 border-ink bg-surface p-2 rounded-brut-sm">
               <p class="text-[10px] font-black uppercase text-ink/70">Terbayar</p>
               <p class="mt-0.5 text-xs sm:text-sm font-black break-words">
                 {{ formatRupiah(summary.total_hutang_terbayar) }}
@@ -109,8 +109,9 @@
           </div>
         </article>
 
+        <!-- Bento tile: Total Lunas (tile lebar) -->
         <article
-          class="p-4 sm:p-6 text-ink bg-brut-lime border-[3px] border-ink shadow-brut transition-all hover:translate-y-[-2px]"
+          class="p-4 sm:p-6 text-ink bg-brut-lime border-[3px] border-ink shadow-brut rounded-brut transition-all hover:translate-y-[-2px] md:col-span-2 flex flex-col"
         >
           <div class="flex items-start justify-between gap-3">
             <div>
@@ -120,22 +121,22 @@
               <p class="mt-0.5 text-[11px] sm:text-xs font-bold text-ink/70">Akumulasi selesai</p>
             </div>
             <span
-              class="grid shrink-0 w-8 h-8 place-items-center border-2 border-ink bg-surface shadow-brut-sm"
+              class="grid shrink-0 w-8 h-8 place-items-center border-2 border-ink bg-surface shadow-brut-sm rounded-brut-sm"
             >
               <PhCheckCircle weight="fill" class="w-4 h-4" />
             </span>
           </div>
 
-          <p class="mt-3 text-xl sm:text-2xl md:text-3xl font-black break-words">
+          <p class="mt-3 text-2xl sm:text-3xl font-black break-words">
             {{ formatRupiah(summary.total_hutang_terbayar) }}
           </p>
 
-          <div class="mt-4">
+          <div class="mt-auto pt-4">
             <div class="flex items-end justify-between gap-2 mb-1.5">
               <span class="text-[11px] sm:text-xs font-black uppercase">Progress lunas</span>
               <span class="text-lg sm:text-xl font-black leading-none">{{ pctLunas }}%</span>
             </div>
-            <div class="w-full h-4 border-2 border-ink bg-surface overflow-hidden">
+            <div class="w-full h-4 border-2 border-ink bg-surface overflow-hidden rounded-brut-sm">
               <div
                 class="h-full bg-ink transition-all duration-700"
                 :style="{ width: pctLunas + '%' }"
@@ -152,41 +153,40 @@
             </p>
           </div>
         </article>
-      </div>
 
-      <div
-        v-if="summary.total_tagihan_h3 > 0 || summary.reminder_h3.length > 0"
-        class="mt-4 sm:mt-6 border-[3px] border-ink bg-brut-yellow shadow-brut"
-      >
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
-          <PhWarningCircle weight="fill" class="w-7 h-7 mx-auto sm:mx-0 text-brut-red" />
-          <div class="text-center sm:text-left">
-            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <h3 class="text-lg sm:text-xl font-black uppercase tracking-wide text-ink">
-                Peringatan Jatuh Tempo H-3!
-              </h3>
-              <span
-                class="border-2 border-ink bg-surface px-2 py-0.5 text-[11px] font-black shadow-brut-sm"
-              >
-                {{ summary.reminder_h3.length }} tagihan
-              </span>
+        <!-- Bento tile: peringatan H-3 (strip lebar penuh) -->
+        <article
+          v-if="summary.total_tagihan_h3 > 0 || summary.reminder_h3.length > 0"
+          class="md:col-span-4 border-[3px] border-ink bg-brut-yellow shadow-brut rounded-brut transition-all hover:translate-y-[-2px]"
+        >
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
+            <PhWarningCircle weight="fill" class="w-7 h-7 mx-auto sm:mx-0 text-brut-red shrink-0" />
+            <div class="text-center sm:text-left sm:flex-1">
+              <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <h3 class="text-lg sm:text-xl font-black uppercase tracking-wide text-ink">
+                  Peringatan Jatuh Tempo H-3!
+                </h3>
+                <span
+                  class="border-2 border-ink bg-surface px-2 py-0.5 text-[11px] font-black shadow-brut-sm rounded-brut-sm"
+                >
+                  {{ summary.reminder_h3.length }} tagihan
+                </span>
+              </div>
+              <p class="mt-1 text-sm sm:text-base text-ink">
+                Ada tagihan sebesar
+                <span class="font-black">{{ formatRupiah(summary.total_tagihan_h3) }}</span>
+                yang harus dibayar dalam 3 hari ke depan.
+              </p>
             </div>
-            <p class="mt-1 text-sm sm:text-base text-ink">
-              Ada tagihan sebesar
-              <span class="font-black">{{ formatRupiah(summary.total_tagihan_h3) }}</span>
-              yang harus dibayar dalam 3 hari ke depan.
-            </p>
+            <button
+              @click="showModal = true"
+              class="flex items-center justify-center shrink-0 sm:w-auto w-full py-2 px-4 gap-2 text-white border-2 border-ink bg-brut-red rounded-brut shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+            >
+              <PhList weight="bold" class="w-5 h-5" />
+              Lihat Detail
+            </button>
           </div>
-        </div>
-        <div class="px-4 pb-4">
-          <button
-            @click="showModal = true"
-            class="flex items-center justify-center w-full py-2 gap-2 text-white border-2 border-ink bg-brut-red rounded-none shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
-          >
-            <PhList weight="bold" class="w-5 h-5" />
-            Lihat Detail
-          </button>
-        </div>
+        </article>
       </div>
     </div>
 
@@ -196,7 +196,7 @@
       @click.self="showModal = false"
     >
       <div
-        class="w-full sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden bg-surface border-t-[3px] sm:border-[3px] border-ink shadow-brut-lg"
+        class="w-full sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden bg-surface border-t-[3px] sm:border-[3px] border-ink shadow-brut-lg rounded-t-brut sm:rounded-brut"
       >
         <div
           class="flex justify-between items-center p-4 border-b-[3px] border-ink bg-brut-yellow shrink-0"
@@ -207,7 +207,7 @@
           </h2>
           <button
             @click="showModal = false"
-            class="flex items-center justify-center w-8 h-8 text-ink bg-brut-lime border-2 border-ink font-black cursor-pointer shadow-brut transition-all hover:translate-y-[-1px]"
+            class="flex items-center justify-center w-8 h-8 text-ink bg-brut-lime border-2 border-ink font-black cursor-pointer shadow-brut rounded-brut-sm transition-all hover:translate-y-[-1px]"
           >
             <PhX weight="bold" class="w-4 h-4" />
           </button>
@@ -222,7 +222,7 @@
             <div
               v-for="trx in summary.reminder_h3"
               :key="trx.id"
-              class="p-4 border-2 border-ink bg-surface shadow-brut-sm"
+              class="p-4 border-2 border-ink bg-surface shadow-brut-sm rounded-brut-sm"
             >
               <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                 <div>
@@ -250,7 +250,7 @@
           <RouterLink
             to="/transactions"
             @click="showModal = false"
-            class="flex items-center justify-center w-full py-2 gap-2 text-ink border-[3px] border-ink bg-brut-cyan rounded-none shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+            class="flex items-center justify-center w-full py-2 gap-2 text-ink border-[3px] border-ink bg-brut-cyan rounded-brut shadow-brut font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
           >
             <PhCreditCard weight="fill" class="w-5 h-5" />
             Bayar Sekarang

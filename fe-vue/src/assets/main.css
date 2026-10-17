@@ -15,6 +15,9 @@
   --shadow-brut: 3px 3px 0px 0px var(--color-ink);
   --shadow-brut-sm: 2px 2px 0px 0px var(--color-ink);
   --shadow-brut-lg: 5px 5px 0px 0px var(--color-ink);
+
+  --radius-brut: 6px;
+  --radius-brut-sm: 4px;
 }
 
 @layer base {

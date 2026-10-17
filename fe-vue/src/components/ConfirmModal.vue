@@ -13,11 +13,11 @@
       @click.self="cancel"
     >
       <div
-        class="p-4 sm:p-6 bg-surface border-[3px] border-ink shadow-brut-lg max-w-md w-[calc(100%-2rem)] sm:w-full mx-auto sm:mx-4"
+        class="p-4 sm:p-6 bg-surface border-[3px] border-ink shadow-brut-lg rounded-brut max-w-md w-[calc(100%-2rem)] sm:w-full mx-auto sm:mx-4"
       >
         <div class="flex items-start gap-3">
           <div
-            class="flex items-center justify-center w-10 h-10 shrink-0 border-2 border-ink"
+            class="flex items-center justify-center w-10 h-10 shrink-0 border-2 border-ink rounded-brut-sm"
             :class="danger ? 'bg-brut-red text-white' : 'bg-brut-cyan text-ink'"
           >
             <PhWarningCircle v-if="danger" weight="fill" class="w-6 h-6" />
@@ -33,14 +33,14 @@
           <button
             type="button"
             @click="cancel"
-            class="flex-1 py-2 text-ink border-[3px] border-ink bg-surface rounded-none shadow-brut-sm font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+            class="flex-1 py-2 text-ink border-[3px] border-ink bg-surface rounded-brut shadow-brut-sm font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
           >
             {{ cancelText }}
           </button>
           <button
             type="button"
             @click="confirm"
-            class="flex-1 py-2 border-[3px] border-ink rounded-none shadow-brut-sm font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
+            class="flex-1 py-2 border-[3px] border-ink rounded-brut shadow-brut-sm font-black cursor-pointer transition-all hover:translate-y-[-2px] hover:translate-x-[-2px]"
             :class="danger ? 'bg-brut-red text-white' : 'bg-brut-cyan text-ink'"
           >
             {{ confirmText }}
