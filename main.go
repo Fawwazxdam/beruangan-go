@@ -29,6 +29,11 @@ func main() {
 
 	mux.HandleFunc("GET /api/summary", handlers.GetDashboardSummary)
 
+	mux.HandleFunc("GET /api/wallets", handlers.GetWallets)
+	mux.HandleFunc("POST /api/wallets", handlers.CreateWallet)
+
+	mux.HandleFunc("POST /api/webhook/telegram", handlers.TelegramWebhook)
+
 // 4. SETUP ROUTE FRONTEND (JURUS SPA)
 	dist, err := fs.Sub(frontendFiles, "fe-vue/dist")
 	if err != nil {

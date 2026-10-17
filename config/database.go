@@ -3,13 +3,20 @@ package config
 import (
 	"database/sql"
 	"log"
-	_ "modernc.org/sqlite"
+
+	_ "modernc.org/sqlite" // Driver SQLite murni kamu
+
+	// Import library golang-migrate
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/sqlite"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 var DB *sql.DB
 
 func ConnectDB() {
 	var err error
+	// Pakai path db kamu, pastikan lokasinya benar
 	DB, err = sql.Open("sqlite", "./keuangan.db")
 	if err != nil {
 		log.Fatal("Gagal buka file SQLite: ", err)
@@ -19,40 +26,36 @@ func ConnectDB() {
 		log.Fatal("Database tidak merespon: ", err)
 	}
 
-	buatTabel()
+	// Panggil fungsi migrasi otomatis
+	runMigrations()
+
 	log.Println("✅ Database siap digunakan!")
 }
 
-func buatTabel() {
-	// 1. Bikin tabel (Berlaku kalau file keuangan.db benar-benar baru)
-	query := `
-    CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        amount INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        due_date TEXT,
-        group_id TEXT,
-        status TEXT DEFAULT 'PENDING'
-    );
-    `
-	_, err := DB.Exec(query)
+func runMigrations() {
+	// 1. Koneksikan driver golang-migrate dengan *sql.DB milikmu
+	driver, err := sqlite.WithInstance(DB, &sqlite.Config{})
 	if err != nil {
-		log.Fatal("Gagal bikin tabel: ", err)
+		log.Fatal("Gagal inisialisasi driver migrasi: ", err)
 	}
 
-	// 2. JURUS MIGRASI AMAN (Untuk data lama yang belum punya user_id)
-	// Kita paksa tambah kolom user_id. Kalau error (karena kolomnya udah ada), cuekin aja.
-	// Wajib pakai DEFAULT supaya data lama otomatis terisi teks ini.
-	_, errAlter := DB.Exec("ALTER TABLE transactions ADD COLUMN user_id TEXT NOT NULL DEFAULT 'dam'")
-	if errAlter == nil {
-		log.Println("🔧 Kolom user_id berhasil ditambahkan ke tabel lama!")
+	// 2. Tentukan letak folder file .sql kamu (menggunakan file://)
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://db/migrations", // Path ke folder migrasi yang baru kita buat
+		"sqlite",               // Nama driver (harus 'sqlite' untuk modernc)
+		driver,
+	)
+	if err != nil {
+		log.Fatal("Gagal setup migrasi: ", err)
 	}
 
-	// 3. Pastikan semua data lama yang mungkin kosong di-set ke kode rahasiamu
-	_, errUpdate := DB.Exec("UPDATE transactions SET user_id = 'dam' WHERE user_id IS NULL OR user_id = ''")
-	if errUpdate == nil {
-		log.Println("♻️ Data lama berhasil disuntik user_id!")
+	// 3. Jalankan migrasi!
+	err = m.Up()
+
+	// 4. Cek hasil. Kalau muncul ErrNoChange, berarti gak ada file sql baru, aman.
+	if err != nil && err != migrate.ErrNoChange {
+		log.Fatal("Gagal menjalankan migrasi: ", err)
 	}
+
+	log.Println("🚀 Cek Migrasi Selesai: Database up-to-date!")
 }
