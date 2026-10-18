@@ -64,5 +64,5 @@ jobs:
             chmod +x beruangan-app
             
             # 3. Hajar pakai PM2 biasa (nggak perlu alamat panjang lagi)
-            pm2 restart beruangan || pm2 start ./beruangan-app --name "beruangan"
+            pm2 restart beruangan-app || pm2 start ./beruangan-app --name "beruangan-app"
             pm2 save
