@@ -13,9 +13,14 @@ import (
 //go:embed fe-vue/dist
 var frontendFiles embed.FS
 
+// Embed file migrasi .sql ke dalam binary, biar nggak tergantung
+// folder fisik / current working directory di server produksi.
+//go:embed db/migrations
+var migrationFiles embed.FS
+
 func main() {
 	// 1. Panggil koneksi DB
-	config.ConnectDB()
+	config.ConnectDB(migrationFiles)
 
 	// 2. Siapkan Buku Menu (Mux)
 	mux := http.NewServeMux()

@@ -2,6 +2,7 @@ package config
 
 import (
 	"database/sql"
+	"io/fs"
 	"log"
 
 	_ "modernc.org/sqlite" // Driver SQLite murni kamu
@@ -9,12 +10,12 @@ import (
 	// Import library golang-migrate
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
 var DB *sql.DB
 
-func ConnectDB() {
+func ConnectDB(migrations fs.FS) {
 	var err error
 	// Pakai path db kamu, pastikan lokasinya benar
 	DB, err = sql.Open("sqlite", "./keuangan.db")
@@ -27,32 +28,36 @@ func ConnectDB() {
 	}
 
 	// Panggil fungsi migrasi otomatis
-	runMigrations()
+	runMigrations(migrations)
 
 	log.Println("✅ Database siap digunakan!")
 }
 
-func runMigrations() {
+func runMigrations(migrations fs.FS) {
 	// 1. Koneksikan driver golang-migrate dengan *sql.DB milikmu
 	driver, err := sqlite.WithInstance(DB, &sqlite.Config{})
 	if err != nil {
 		log.Fatal("Gagal inisialisasi driver migrasi: ", err)
 	}
 
-	// 2. Tentukan letak folder file .sql kamu (menggunakan file://)
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://db/migrations", // Path ke folder migrasi yang baru kita buat
-		"sqlite",               // Nama driver (harus 'sqlite' untuk modernc)
-		driver,
-	)
+	// 2. Baca file .sql dari dalam binary (sudah di-embed lewat //go:embed).
+	//    Dibanding "file://db/migrations", cara ini tidak tergantung
+	//    current working directory, jadi aman dijalankan dari mana pun (pm2, dll).
+	sourceDriver, err := iofs.New(migrations, "db/migrations")
+	if err != nil {
+		log.Fatal("Gagal memuat migrasi dari binary: ", err)
+	}
+
+	// 3. Gabungkan source migrasi + driver database yang sudah ada
+	m, err := migrate.NewWithInstance("iofs", sourceDriver, "sqlite", driver)
 	if err != nil {
 		log.Fatal("Gagal setup migrasi: ", err)
 	}
 
-	// 3. Jalankan migrasi!
+	// 4. Jalankan migrasi!
 	err = m.Up()
 
-	// 4. Cek hasil. Kalau muncul ErrNoChange, berarti gak ada file sql baru, aman.
+	// 5. Cek hasil. Kalau muncul ErrNoChange, berarti gak ada file sql baru, aman.
 	if err != nil && err != migrate.ErrNoChange {
 		log.Fatal("Gagal menjalankan migrasi: ", err)
 	}
